@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+package imggen;
+
+message IPC {
+    enum Action {
+        PING = 0;
+        PONG = 1;
+        STARTED = 2;
+        STOP = 3;
+        AUDIO_CMD = 4;
+        AUDIO_CMD_OK = 5;
+        AUDIO_CMD_ERR = 6;
+        LOG = 7;
+    }
+    Action action = 1;
+    string str_data = 2;
+    bytes blob_data = 3;
+}
+        
