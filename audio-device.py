@@ -32,7 +32,8 @@ if __name__ == "__main__":
     audio_id = None
 
     while running:
-        time.sleep(.5)
+        time.sleep(10)
+        #time.sleep(.5)
         if state == act.STARTED:
             socket.send(message(act.STARTED))
             msg = socket.recv()
@@ -45,21 +46,25 @@ if __name__ == "__main__":
                 raise Exception("main:IPC Init Fail")
             state = act.PING
         else:
-            print("Sending ping...")
+            #print("Sending ping...")
             info = { "id": audio_id }
             socket.send(message(act.PING, string=json.dumps(info) ))
             msg = socket.recv()
             ipcm = rmessage(msg)
             if ipcm.action == act.PONG: 
-                print("main: server is alive") 
+                #print("main: server is alive") 
                 try:
                     data = json.loads(ipcm.str_data)
-                    print(f"Status is {data['status']}")
+                    #print(f"Status is {data['status']}")
                 except:
                     print(f"woops, bad status: {ipcm.str_data}")
             elif ipcm.action == act.AUDIO_CMD: 
-                print(f"main: command requested for audio device {ipcm.string}")
-                socket.send(message(act.PONG))
+                data = json.loads(ipcm.str_data)
+                if "commands" in data:
+                    for c in data["commands"]:
+                        print(f"* {c}")
+                else:
+                    print(f"main: command requested for audio device, but unknown: {ipcm.str_data}")
             elif ipcm.action == act.STOP: 
                 print("main: server has requested stop")
                 running = False
