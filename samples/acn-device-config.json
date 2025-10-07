@@ -1,0 +1,14 @@
+{
+    "host": "localhost",
+    "port": 5788,
+    "poll_sec":0.4,
+    "playlists": [
+        {"name":"morning", "url":"URL_FOR_YOUR_DEVICE"},
+        {"name":"evening", "url": "NIGHT_URL"}
+	],
+    "actions": [
+        {"name": "playlist" , "python":"samples.player.playlist"},
+        {"name": "player" ,"script": "./change_state.sh"}
+    ]
+}
+
