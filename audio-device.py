@@ -2,6 +2,7 @@ import zmq
 import ipc_pb2
 import time
 import json
+import subprocess
 from pathlib import Path
 from pydantic import BaseModel,Field,model_validator
 from typing import Annotated,Optional
@@ -60,6 +61,42 @@ def rmessage( blob ):
     out.ParseFromString(blob)
     return out
 
+def do_command( command, playlists, actions ):
+
+    def _run( ccfg, parts ):
+        if ccfg["cfg"].python:
+            ccfg["func"]( *parts )
+        else:
+            #subprocess.run( [ ccfg["cfg"].script ] + parts, capture_output=True )
+            proc = subprocess.Popen( [ ccfg["cfg"].script ] + parts, shell=False) 
+            proc.communicate() 
+
+
+    cparts = command.split()
+    if cparts[0] == "playlist":
+        if len(cparts) != 2:
+            print("Playlist command takes 2 args.")
+            return
+        if not "playlist" in actions:
+            print("No action for playlist") 
+            return
+        if not cparts[1] in playlists:
+            print(f"No playlist for {cparts[1]}")
+            return
+        _run(actions["playlist"], [ playlists[cparts[1]]["url"]])
+        pass
+    elif cparts[0] == "player":
+        if len(cparts) != 2:
+            print("Player command takes 2 args.")
+            return
+        if not "player" in actions:
+            print("No action for player") 
+            return
+        _run(actions["player"], [ cparts[1]])
+        pass
+    else:
+        print(f"Bad Command {cparts[0]}")
+
 if __name__ == "__main__":
     args= get_args()
     cfg = Path(args.config)
@@ -69,28 +106,39 @@ if __name__ == "__main__":
     else:
         opts = Config.model_validate_json(json.dumps(default_cfg))
 
-    print( f"Playlists = {opts.playlists}")
-    cmds = "None!"
-    print(f"A = {opts.actions}")
+    playlist_by_name = {}
+    if opts.playlists:
+        playlist_by_name = { itm["name"]: itm  for itm in opts.playlists }
+    cmd_by_name = {} 
     if opts.actions:
-        [ print(f"Item is {itm}") for itm in opts.actions ]
-        cmds = { itm.name: {"cfg": itm } for itm in opts.actions }
+        cmd_by_name = { itm.name: {"cfg": itm } for itm in opts.actions }
         import importlib
         import re
-        cs = re.match("^(.*)\.(.*)",cmds["playlist"]["cfg"].python)
-        print( f"cs = {cs} {cs.group(1)}, {cs.group(2)}")
-        act_mod = cs.group(1)
-        act_func = cs.group(2)
-        mod = importlib.import_module( act_mod )
-        act_runner = getattr(mod,act_func)
-        print(act_runner)
-        act_runner( "42" )
+        for k in cmd_by_name.keys():
+            # verify all python loads
+            try:
+                if cmd_by_name[k]["cfg"].python:
+                    cs = re.match("^(.*)\.(.*)",cmd_by_name[k]["cfg"].python)
+                    #print( f"cs = {cs} {cs.group(1)}, {cs.group(2)}")
+                    act_mod = cs.group(1)
+                    act_func = cs.group(2)
+                    mod = importlib.import_module( act_mod )
+                    act_runner = getattr(mod,act_func)
+                    cmd_by_name[k]["func"] = act_runner
+                # verify shell script exists.
+                else:
+                    script = cmd_by_name[k]["cfg"].script 
+                    if not Path( script ).exists(): 
+                        raise Exception(f"Configured script for {k} is {script}, but doesn't exist.")
+            except Exception as e:
+                print("Failed to verify actions work")
+                sys.exit(1)
 
-    print(cmds)
 
-    sys.exit(0)
 
     print(f"Starting Audio Device; Server is {opts.host}:{opts.port}")
+    print(f"Registered Actions for: " + " ".join( cmd_by_name.keys()))
+    print(f"Playlists for: " + " ".join( playlist_by_name.keys()))
     ctx = zmq.Context()
     socket = ctx.socket(zmq.REQ)
     socket.connect(f"tcp://{opts.host}:{opts.port}")
@@ -130,7 +178,7 @@ if __name__ == "__main__":
                 data = json.loads(ipcm.str_data)
                 if "commands" in data:
                     for c in data["commands"]:
-                        print(f"* {c}")
+                        do_command(c, playlist_by_name, cmd_by_name )
                 else:
                     print(f"main: command requested for audio device, but unknown: {ipcm.str_data}")
             elif ipcm.action == act.STOP: 
