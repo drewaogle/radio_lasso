@@ -6,11 +6,42 @@
         <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.7/dist/htmx.min.js"
             integrity="sha384-ZBXiYtYQ6hJ2Y0ZNoYuI+Nq5MqWBr+chMrS/RkXpNzQCApHEhOt2aY8EJgqwHLkJ"
             crossorigin="anonymous"></script>
+<style>
+body {
+  background: #6e28d9;
+  padding: 0 24px;
+  color: white;
+  margin: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.mediabutton {
+  background-color: grey;
+  border-radius:  4px;
+  padding: 10px 10px;
+}
+.mediabutton button {
+  margin-top: 50px;
+  background-color: #444444;
+  color: white;
+  display:block;
+  margin: 0 auto;
+}
+</style>
     </head>
     <body>
         <p>The Remote</p>
         <div id="remotebody">
-            <div class="remotebutton" >
+            <div class="mediabutton" >
+                <input name="player" type="hidden" value="play"></input>
+                {% csrf_token %}
+                <button hx-post="{% url 'tuner:tune' %}" hx-trigger="click" hx-target="#status-out"
+                hx-swap="outerHTML" hx-include="previous [name='player'],[
+                name='csrfmiddlewaretoken']">&#x23F8;</button>
+                <div id="status-out"></div>
+            </div>
+            <div class="mediabutton" >
                 <input name="channel" type="hidden" value="baby"></input>
                 {% csrf_token %}
                 <button hx-post="{% url 'tuner:tune' %}" hx-trigger="click" hx-target="#baby-channel-out"
@@ -18,7 +49,7 @@
                 Baby</button>
                 <div id="baby-channel-out">Radio!</div>
             </div>
-            <div class="remotebutton" >
+            <div class="mediabutton" >
                 <input name="channel" type="hidden" value="teen"></input>
                 {% csrf_token %}
                 <button hx-post="{% url 'tuner:tune' %}" hx-trigger="click" hx-target="#teen-channel-out"
