@@ -1,11 +1,13 @@
 <!doctype html>
-<html>
+<html lang="en">
     <head>
-        <meta charset="utf-8"/>
+        <meta charset="utf-8">
+         <meta name="viewport" content="width=device-width, initial-scale=1">
         <title>Welcome to the Remote!</title>
         <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.7/dist/htmx.min.js"
             integrity="sha384-ZBXiYtYQ6hJ2Y0ZNoYuI+Nq5MqWBr+chMrS/RkXpNzQCApHEhOt2aY8EJgqwHLkJ"
             crossorigin="anonymous"></script>
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
 <style>
 body {
   background: #6e28d9;
@@ -31,31 +33,33 @@ body {
 </style>
     </head>
     <body>
-        <p>The Remote</p>
-        <div id="remotebody">
-            <div class="mediabutton" >
-                <input name="player" type="hidden" value="play"></input>
-                {% csrf_token %}
-                <button hx-post="{% url 'tuner:tune' %}" hx-trigger="click" hx-target="#status-out"
-                hx-swap="outerHTML" hx-include="previous [name='player'],[
-                name='csrfmiddlewaretoken']">&#x23F8;</button>
-                <div id="status-out"></div>
+
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI" crossorigin="anonymous"></script>
+        <div class="container text-center">
+            <p>The Remote</p>
+            <div class="row">
+                {% for ctl in controls %}
+                <div class="col mediabutton" >
+                    <input name="control" type="hidden" value="{{ ctl.name}}"></input>
+                    {% csrf_token %}
+                    <button hx-post="{% url 'tuner:control' %}" hx-trigger="click" hx-target="#status-out"
+                    hx-swap="outerHTML" hx-include="previous [name='control'],[ name='csrfmiddlewaretoken']">&{{ctl.emoji}}</button>
+                    <div id="status-out"></div>
+                </div>
+                {% endfor %}
             </div>
-            <div class="mediabutton" >
-                <input name="channel" type="hidden" value="baby"></input>
-                {% csrf_token %}
-                <button hx-post="{% url 'tuner:tune' %}" hx-trigger="click" hx-target="#baby-channel-out"
-                hx-swap="outerHTML" hx-include="previous [name='channel'],[ name='csrfmiddlewaretoken']">Start
-                Baby</button>
-                <div id="baby-channel-out">Radio!</div>
-            </div>
-            <div class="mediabutton" >
-                <input name="channel" type="hidden" value="teen"></input>
-                {% csrf_token %}
-                <button hx-post="{% url 'tuner:tune' %}" hx-trigger="click" hx-target="#teen-channel-out"
-                hx-swap="outerHTML" hx-include="previous [name='channel'],[ name='csrfmiddlewaretoken']">Start
-                Teen</button>
-                <div id="teen-channel-out">Radio!</div>
+            <div class="row">
+                <p>Playlists</p>
+                {% for pl in playlists %}
+                <div class="col mediabutton" >
+                    <input name="channel" type="hidden" value="{{ pl.name }}"></input>
+                    {% csrf_token %}
+                    <button hx-post="{% url 'tuner:playlist' %}" hx-trigger="click"
+                                                             hx-target="#{{pl.name}}-channel-out"
+                    hx-swap="outerHTML" hx-include="previous [name='channel'],[ name='csrfmiddlewaretoken']">Start {{ pl.for_user }}</button>
+                    <div id="{{pl.name}}-channel-out">Radio!</div>
+                </div>
+                {% endfor %}
             </div>
         </div>
     </body>
