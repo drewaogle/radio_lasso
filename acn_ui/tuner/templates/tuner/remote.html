@@ -1,0 +1,31 @@
+<!doctype html>
+<html>
+    <head>
+        <meta charset="utf-8"/>
+        <title>Welcome to the Remote!</title>
+        <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.7/dist/htmx.min.js"
+            integrity="sha384-ZBXiYtYQ6hJ2Y0ZNoYuI+Nq5MqWBr+chMrS/RkXpNzQCApHEhOt2aY8EJgqwHLkJ"
+            crossorigin="anonymous"></script>
+    </head>
+    <body>
+        <p>The Remote</p>
+        <div id="remotebody">
+            <div class="remotebutton" >
+                <input name="channel" type="hidden" value="baby"></input>
+                {% csrf_token %}
+                <button hx-post="{% url 'tuner:tune' %}" hx-trigger="click" hx-target="#baby-channel-out"
+                hx-swap="outerHTML" hx-include="previous [name='channel'],[ name='csrfmiddlewaretoken']">Start
+                Baby</button>
+                <div id="baby-channel-out">Radio!</div>
+            </div>
+            <div class="remotebutton" >
+                <input name="channel" type="hidden" value="teen"></input>
+                {% csrf_token %}
+                <button hx-post="{% url 'tuner:tune' %}" hx-trigger="click" hx-target="#teen-channel-out"
+                hx-swap="outerHTML" hx-include="previous [name='channel'],[ name='csrfmiddlewaretoken']">Start
+                Teen</button>
+                <div id="teen-channel-out">Radio!</div>
+            </div>
+        </div>
+    </body>
+</html>
