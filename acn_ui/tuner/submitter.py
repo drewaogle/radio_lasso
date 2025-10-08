@@ -26,15 +26,42 @@ def rmessage( blob ):
 def submit_audio_cmd( cmdtype, cmdarg):
 
     print("AUDIO CMD")
-    ctx = zmq.Context()
-    socket = ctx.socket(zmq.REQ)
-    socket.connect("tcp://localhost:5760")
+    ctx = None
+    ok = False
+    try:
+        ctx = zmq.Context()
+        socket = ctx.socket(zmq.REQ)
+        socket.connect("tcp://localhost:5760")
 
-    info = {
-            "cmd": f" {cmdtype} {cmdarg}"
-            }
-    socket.send(message(act.AUDIO_CMD, string=json.dumps(info)))
-    state = act.STARTED
-    msg = socket.recv()
-    ipcm = rmessage(msg)
+        poller = zmq.Poller()
+        #poller.register(socket, zmq.POLLOUT)
+        poller.register(socket, zmq.POLLIN)
+
+        #socks = dict(poller.poll(1000))
+
+        info = {
+                "cmd": f"{cmdtype} {cmdarg}"
+                }
+
+        try:
+            socket.send(message(act.AUDIO_CMD, string=json.dumps(info)), flags = zmq.NOBLOCK)
+            socks = dict(poller.poll(1000))
+            print(f"Results = {socks}")
+            if socket in socks and socks[socket] == zmq.POLLIN:
+                print("Ok to receive Audio Result")
+                state = act.STARTED
+                msg = socket.recv()
+                ipcm = rmessage(msg)
+                print("Done")
+                ok = True
+            else:
+                print("Unable to get result from Command!!")
+        except Exception as e:
+            print("Unable to send Command!!")
+    finally:
+        print("submit_audio_cmd: cleanup")
+        if ctx is not None:
+            ctx.destroy()
+            #ctx.term() if ok else ctx.destroy()
+    return ok
     
