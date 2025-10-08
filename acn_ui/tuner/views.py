@@ -24,9 +24,9 @@ def main(request):
                 PlaylistItem(name="teen", for_user="Teen")
                 ]
     player_controls = [
-               TunerControl(name="play",emoji="#x23f5;"),
-               TunerControl(name="pause",emoji="#x23f8;"),
-               TunerControl(name="stop",emoji="#x23f9;")
+               TunerControl(name="play",emoji="play-btn"),
+               TunerControl(name="pause",emoji="pause-btn"),
+               TunerControl(name="stop",emoji="stop-btn"),
                ]
     context = { "playlists" : playlists , "controls":player_controls }
     return render(request, "tuner/remote.html",context)
