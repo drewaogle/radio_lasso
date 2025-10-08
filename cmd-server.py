@@ -120,7 +120,6 @@ def cmd_proxy_thread( port ):
                 # allows server time to notify clients.
 
             if to_send is not None:
-                logger.info(f"Poll Results = {socks}")
                 try:
                     socket.send(message(act.AUDIO_CMD,string=to_send), flags=zmq.NOBLOCK)
                 except Exception as e:
@@ -243,7 +242,7 @@ def cmd_server( port ):
             for e in ejected:
                 logger.warning(f"Dropped data for client {e}")
                 del responsive_clients[e]
-                if e in cmd_for_clients:
+                if e in cmd_for_client:
                     del cmd_for_client[e]
 
         if loops % 500 == 0:
