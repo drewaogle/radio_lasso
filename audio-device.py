@@ -1,4 +1,5 @@
 import zmq
+import os
 import ipc_pb2
 import time
 import json
@@ -8,8 +9,29 @@ from pydantic import BaseModel,Field,model_validator
 from typing import Annotated,Optional
 from typing_extensions import TypedDict
 from argparse import ArgumentParser
+import daemon
+import logging
 
 act= ipc_pb2.IPC.Action
+
+daemon_fhs = []
+
+DEFAULT_FORMAT= "%(asctime)s %(levelname)s - %(funcName)s :: %(message)s"
+logger = logging.getLogger()
+logging.basicConfig(level=logging.INFO, format=DEFAULT_FORMAT)
+
+
+def set_loggers(args):
+        for h in logger.handlers[:]:
+            logger.removeHandler(h)
+        fmt = logging.Formatter( DEFAULT_FORMAT )
+        logfile =  args.logfile if args.logfile is not None else "/tmp/acn-audio-device.log"
+        fh = logging.FileHandler( logfile )
+        daemon_fhs.append(fh.stream.fileno())
+        fh.setFormatter(fmt)
+        fh.setLevel(logging.INFO)
+        logger.addHandler(fh)
+
 
 class PlaylistItem(TypedDict):
     name:str
@@ -43,8 +65,13 @@ default_cfg = {
 def get_args():
     p = ArgumentParser()
     p.add_argument("-C","--config",default="/etc/acn/device.conf.json")
+    p.add_argument("-D","--no-daemonize",action="store_true", default=False)
+    p.add_argument("--logfile",default=None)
 
     args = p.parse_args()
+    if not args.no_daemonize or args.logfile:
+        set_loggers(args)
+
     return args
 
 def message( action, string=None, blob=None ):
@@ -75,35 +102,35 @@ def do_command( command, playlists, actions ):
     cparts = command.split()
     if cparts[0] == "playlist":
         if len(cparts) != 2:
-            print("Playlist command takes 2 args.")
+            logging.warning("Playlist command takes 2 args.")
             return
         if not "playlist" in actions:
-            print("No action for playlist") 
+            logging.warning("No action for playlist") 
             return
         if not cparts[1] in playlists:
-            print(f"No playlist for {cparts[1]}")
+            logging.warning(f"No playlist for {cparts[1]}")
             return
         _run(actions["playlist"], [ playlists[cparts[1]]["url"]])
         pass
     elif cparts[0] == "player":
         if len(cparts) != 2:
-            print("Player command takes 2 args.")
+            logging.warning("Player command takes 2 args.")
             return
         if not "player" in actions:
-            print("No action for player") 
+            logging.warning("No action for player") 
             return
         _run(actions["player"], [ cparts[1]])
         pass
     else:
-        print(f"Bad Command {cparts[0]}")
+        logging.warning(f"Bad Command {cparts[0]}")
 
-if __name__ == "__main__":
-    args= get_args()
+def main(args):
     cfg = Path(args.config)
     if cfg.exists():
         with open(cfg) as fp:
             opts = Config.model_validate_json(fp.read())
     else:
+        logger.warning(f"Can't find config {cfg} - using defaults!")
         opts = Config.model_validate_json(json.dumps(default_cfg))
 
     playlist_by_name = {}
@@ -131,14 +158,14 @@ if __name__ == "__main__":
                     if not Path( script ).exists(): 
                         raise Exception(f"Configured script for {k} is {script}, but doesn't exist.")
             except Exception as e:
-                print("Failed to verify actions work")
+                logging.warning("Failed to verify actions work")
                 sys.exit(1)
 
 
 
-    print(f"Starting Audio Device; Server is {opts.host}:{opts.port}")
-    print(f"Registered Actions for: " + " ".join( cmd_by_name.keys()))
-    print(f"Playlists for: " + " ".join( playlist_by_name.keys()))
+    logging.info(f"Starting Audio Device; Server is {opts.host}:{opts.port}")
+    logging.info(f"Registered Actions for: " + " ".join( cmd_by_name.keys()))
+    logging.info(f"Playlists for: " + " ".join( playlist_by_name.keys()))
     ctx = zmq.Context()
     socket = ctx.socket(zmq.REQ)
     socket.connect(f"tcp://{opts.host}:{opts.port}")
@@ -156,7 +183,7 @@ if __name__ == "__main__":
             ipcm = rmessage(msg)
             if ipcm.action == act.STARTED: 
                 info = json.loads(ipcm.str_data)
-                print(f"Ok, connected id == {info['id']} ")
+                logging.info(f"Ok, connected id == {info['id']} ")
                 audio_id = info["id"]
             else:
                 raise Exception("main:IPC Init Fail")
@@ -173,19 +200,30 @@ if __name__ == "__main__":
                     data = json.loads(ipcm.str_data)
                     #print(f"Status is {data['status']}")
                 except:
-                    print(f"woops, bad status: {ipcm.str_data}")
+                    logging.warning(f"woops, bad status: {ipcm.str_data}")
             elif ipcm.action == act.AUDIO_CMD: 
                 data = json.loads(ipcm.str_data)
                 if "commands" in data:
                     for c in data["commands"]:
                         do_command(c, playlist_by_name, cmd_by_name )
                 else:
-                    print(f"main: command requested for audio device, but unknown: {ipcm.str_data}")
+                    logging.warning(f"main: command requested for audio device, but unknown: {ipcm.str_data}")
             elif ipcm.action == act.STOP: 
-                print("main: server has requested stop")
+                logging.info("main: server has requested stop")
                 running = False
             else:
-                print(f"audio: uhh .. unknown command? {ipcm.action}")
+                logging.warning(f"audio: uhh .. unknown command? {ipcm.action}")
 
     
-    print("exiting")
+    logging.info("exiting")
+
+args= get_args()
+if __name__ == "__main__":
+    if args.no_daemonize:
+        main(args)
+    else:
+        ctx = daemon.DaemonContext(working_directory=os.getcwd())
+        ctx.files_preserve = daemon_fhs
+        with ctx:
+            main(args)
+
