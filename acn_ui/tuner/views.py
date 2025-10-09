@@ -1,4 +1,5 @@
-from django.shortcuts import render
+from django.shortcuts import render,redirect
+from django.urls import reverse
 
 from django.http import HttpResponse,JsonResponse
 from django.views.decorators.http import require_POST
@@ -19,6 +20,8 @@ class PlaylistItem(BaseModel):
     for_user:str
 
 def main(request):
+    if not request.user.is_authenticated:
+        return redirect(reverse("login"))
     playlists = [ 
                 PlaylistItem(name="baby", for_user="Baby"),
                 PlaylistItem(name="teen", for_user="Teen")
@@ -33,12 +36,33 @@ def main(request):
 
 @require_POST
 def player_playlist(request):
-    print("Tune request for playlist : " + request.POST.get('channel'))
-    submit_audio_cmd("channel",request.POST.get('channel'))
-    return JsonResponse({'action':'sent'})
+    if not request.user.is_authenticated:
+        return redirect(reverse("login"))
+    channel =  request.POST.get('channel')
+    print(f"Tune request for playlist : {channel} ")
+    submit_audio_cmd("playlist", channel )
+    if ok:
+        context[ "response"] =  f"Changed to {channel}"  
+    else:
+        context[ "response"] =  f"Unable to change to {channel}" 
+    resp = render(request, "tuner/response.html", context )
+    resp.headers["HX-Trigger-After-Swap"] = "toasts:initialize"
+    return resp 
 
 @require_POST
 def player_control(request):
-    print("Tune request for control : " + request.POST.get('control'))
-    submit_audio_cmd("X",request.POST.get('control'))
-    return JsonResponse({'action':'sent'})
+    if not request.user.is_authenticated:
+        return redirect(reverse("login"))
+    pctl =  request.POST.get('control')
+    print(f"Tune request for control : {pctl}") 
+    ok = False
+    context = {}
+    ok = submit_audio_cmd("player", pctl ) 
+
+    if ok:
+        context[ "response"] =  f"Sent {pctl}"  
+    else:
+        context[ "response"] =  f"Unable to send {pctl}" 
+    resp = render(request, "tuner/response.html", context )
+    resp.headers["HX-Trigger-After-Swap"] = "toasts:initialize"
+    return resp
