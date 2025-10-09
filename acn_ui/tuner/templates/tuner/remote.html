@@ -12,6 +12,10 @@
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
         <script src="{% static 'tuner/toast.js' %}" defer></script>
 <style>
+.spookytoast {
+    color: orange;
+    background-color: black;
+}
 body {
   background: #6e28d9;
   padding: 0 24px;
@@ -38,7 +42,25 @@ body {
     <body>
 
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI" crossorigin="anonymous"></script>
+
         <div class="container text-center">
+        <nav class="navbar navbar-expand-lg navbar-dark">
+            <div class="container-fluid">
+                <a class="navbar-brand" href="#">
+                <i class="bi bi-rocket-takeoff" style="font-style: 1rem color:yellow"></i>
+                Radio Lasso
+                </a>
+                <div class="collapse navbar-collapse" id="lassoNav">
+                    <ul class="navbar-nav">
+                        <li class="nav-item">
+                            {% csrf_token %}
+                            <a class="nav-link" hx-post="{% url 'logout' %}"
+                                hx-include="previous [name='csrfmiddlewaretoken']">Logout</a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </nav>
             <p>The Remote</p>
             <div class="row">
                 {% for ctl in controls %}
