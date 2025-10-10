@@ -125,3 +125,6 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 LOGIN_REDIRECT_URL = "/tuner/main"
 
 MIDDLEWARE.append("acn_ui.views.custom404middleware")
+
+# set this if you want to server from a prefix ( maybe for a reverse proxy )
+URL_PREFIX = ''
